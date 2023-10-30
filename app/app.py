@@ -2,7 +2,6 @@
 
 from flask import Flask, make_response,jsonify,request
 from flask_migrate import Migrate
-
 from models import db, Restaurant, Pizza
 
 app = Flask(__name__)
