@@ -2,72 +2,34 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+
 class Restaurant(db.Model):
-    __tablename__ = 'restaurants'
+    __tablename__ = 'restaurant'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    address = db.Column(db.String, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    address = db.Column(db.String(200), nullable=False)
+    pizzas = db.relationship('RestaurantPizza', backref='restaurant', cascade='all, delete-orphan')
 
-    restaurant_pizzas = db.relationship('RestaurantPizza', backref='restaurant')
-
-    def to_dict(self):
-        pizza_list = []
-        for rp in self.restaurant_pizzas:
-            pizza_list.append({
-                'id': rp.pizza.id,
-                'name': rp.pizza.name,
-                'ingredients': rp.pizza.ingredients
-            })
-        
-        return {
-            'id': self.id,
-            'name': self.name,
-            'address': self.address,
-            'pizzas': pizza_list
-        }
-
-
-    def __repr__(self):
-        return f'<Restaurant {self.name}, ${self.address}>'
-
-# add any models you may need. 
 
 class Pizza(db.Model):
-
-    __tablename__ = 'pizzas'
-
+    __tablename__ = 'pizza'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-    ingredients = db.Column(db.String, nullable=False)
-    restaurant_pizzas = db.relationship('RestaurantPizza', backref='pizza')
+    name = db.Column(db.String(100), nullable=False)
+    ingredients = db.Column(db.String(200), nullable=False)
+    restaurants = db.relationship('RestaurantPizza', backref='pizza', cascade='all, delete-orphan')
 
-    created_at = db.Column(db.DateTime, server_default = db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate = db.func.now())
-
-    def to_dict(self):
-        d ={
-        'id': self.id,
-        'name': self.name,
-        'ingredients': self.ingredients
-        }
-        return d
-    
-    def __repr__(self):
-        return f'<Pizza {self.name}, ${self.ingredients}>'
 
 class RestaurantPizza(db.Model):
+    __tablename__ = 'restaurant_pizza'
 
-    __tablename__ = 'restaurant_pizzas'
+    id = db.Column(db.Integer, primary_key=True)
+    price = db.Column(db.Float, nullable=False)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
+    pizza_id = db.Column(db.Integer, db.ForeignKey('pizza.id'), nullable=False)
 
-    id = db.Column(db.Integer, primary_key = True)
-    price = db.Column(db.Integer)
-    pizza_id = db.Column(db.Integer, db.ForeignKey('pizzas.id'))
-    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurants.id'))
-
-    created_at = db.Column(db.DateTime, server_default = db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate = db.func.now())
-
-    def __repr__(self):
-        return f'<RestaurantPizza {self.price}>'
+    # @validates('price')
+    # def validate_price(self, key, price):
+    #     assert 1 <= price <= 30, "Price must be between 1 and 30"
+    #     return price

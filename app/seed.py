@@ -1,53 +1,54 @@
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 from faker import Faker
-from random import randint, choice as rc
 
+from models import db, Restaurant, Pizza, RestaurantPizza
 
-from app import app
-from models import db, Pizza, Restaurant, RestaurantPizza
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
 
 fake = Faker()
 
-with app.app_context():
+# Import the necessary SQLAlchemy models from your models.py file
 
-    Restaurant.query.delete()
-    Pizza.query.delete()
-    RestaurantPizza.query.delete()
+def seed_data():
+    with app.app_context():
+        db.create_all()
 
-    restaurant = []
-    for i in range(20):
-        rest = Restaurant(
-            name = fake.name(),
-            address = fake.address()
-        )
-        restaurant.append(rest)
+        # Create some restaurants
+        for _ in range(5):
+            restaurant = Restaurant(name=fake.company(), address=fake.address())
+            db.session.add(restaurant)
 
-        db.session.add_all(restaurant)
+        # Create some pizzas
+        for _ in range(10):
+            pizza = Pizza(name=fake.word(), ingredients=fake.text())
+            db.session.add(pizza)
+
+        # Add objects to the session
         db.session.commit()
 
-    pizza = []
-    for i in range(20):
-        p = Pizza(
-            name = fake.name(),
-            ingredients = fake.word(),
-        )
-        pizza.append(p)
+        # Add relationships between restaurants and pizzas
+        restaurants = Restaurant.query.all()
+        pizzas = Pizza.query.all()
 
-        db.session.add_all(pizza)
+        for restaurant in restaurants:
+            # Randomly select a few pizzas to associate with each restaurant
+            pizzas_to_associate = fake.random_elements(elements=pizzas, length=fake.random_int(min=1, max=5), unique=True)
+
+            for pizza in pizzas_to_associate:
+                # Create a RestaurantPizza object to represent the relationship
+                restaurant_pizza = RestaurantPizza(price=fake.random_int(min=5, max=20), restaurant=restaurant, pizza=pizza)
+                db.session.add(restaurant_pizza)
+
+        # Commit the changes to the database
         db.session.commit()
 
-    restaurant_pizza = []
-    for i in range(20):
-        rp = RestaurantPizza(
-            price = randint(1, 30),
-            pizza = rc(pizza),
-            restaurant = rc(restaurant)
+# Call the seed_data function to populate the tables
+seed_data()
 
-        )
-        restaurant_pizza.append(rp)
-
-        db.session.add_all(restaurant_pizza)
-        db.session.commit()
-
-
-
-
+if __name__ == '__main__':
+    app.run()

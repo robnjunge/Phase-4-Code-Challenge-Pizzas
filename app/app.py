@@ -1,71 +1,54 @@
-#!/usr/bin/env python3
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from faker import Faker
 
-from flask import Flask, make_response,jsonify,request
-from flask_migrate import Migrate
-from models import db, Restaurant, Pizza
+from models import db, Restaurant, Pizza, RestaurantPizza
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-
-migrate = Migrate(app, db)
-
 db.init_app(app)
 
-@app.route('/')
-def home():
-    return '<h1>HOME PAGE</h1>'
+fake = Faker()
 
-@app.route('/restaurants')
-def restaurants():
-    restaurant = Restaurant.query.all()
-    data_format = [rest.to_dict() for rest in restaurant]
+# Import the necessary SQLAlchemy models from your models.py file
 
-    response = make_response(
-        jsonify(data_format),
-        200
-    )
-    return response
+def seed_data():
+    with app.app_context():
+        db.create_all()
 
-@app.route('/restaurants/<int:id>', methods=['GET', 'DELETE'])
-def restaurants_by_id(id):
-    if request.method == 'GET':
-        restaurant = Restaurant.query.filter_by(id=id).first()
-        rest_dict = restaurant.to_dict()
+        # Create some restaurants
+        for _ in range(5):
+            restaurant = Restaurant(name=fake.company(), address=fake.address())
+            db.session.add(restaurant)
 
-        response = make_response(
-            jsonify(rest_dict),
-            200
-        )
-        return response
-    
-    elif request.method == 'DELETE':
-        restaurant = Restaurant.query.filter_by(id=id).first()
-        db.session.delete(restaurant)
+        # Create some pizzas
+        for _ in range(10):
+            pizza = Pizza(name=fake.word(), ingredients=fake.text())
+            db.session.add(pizza)
+
+        # Add objects to the session
         db.session.commit()
-        restaurant_resp = {
-            'Delete_Successful': True,
-            'message': 'Restaurant Successfully deleted!'
-        }
-        response = make_response(
-            jsonify(restaurant_resp), 200
-        )
-        return response
 
-@app.route('/pizzas')
-def pizzas():
-    pizza = Pizza.query.all()
-    data_format = [p.to_dict() for p in pizza]
+        # Add relationships between restaurants and pizzas
+        restaurants = Restaurant.query.all()
+        pizzas = Pizza.query.all()
 
-    response = make_response(
-        jsonify(data_format),
-        200
-    )
-    return response
+        for restaurant in restaurants:
+            # Randomly select a few pizzas to associate with each restaurant
+            pizzas_to_associate = fake.random_elements(elements=pizzas, length=fake.random_int(min=1, max=5), unique=True)
 
+            for pizza in pizzas_to_associate:
+                # Create a RestaurantPizza object to represent the relationship
+                restaurant_pizza = RestaurantPizza(price=fake.random_int(min=5, max=20), restaurant=restaurant, pizza=pizza)
+                db.session.add(restaurant_pizza)
 
+        # Commit the changes to the database
+        db.session.commit()
 
+# Call the seed_data function to populate the tables
+seed_data()
 
 if __name__ == '__main__':
-    app.run(port=5555)
+    app.run()
