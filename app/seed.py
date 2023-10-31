@@ -50,5 +50,3 @@ def seed_data():
 # Call the seed_data function to populate the tables
 seed_data()
 
-if __name__ == '__main__':
-    app.run()
